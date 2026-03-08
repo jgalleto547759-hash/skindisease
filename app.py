@@ -105,6 +105,6 @@ for message in st.session_state.messages:
         st.markdown(f"<div style='text-align: left; background-color: #F1F0F0; padding: 8px; border-radius: 10px; margin:5px 0'>{message['content']}</div>", unsafe_allow_html=True)
 
 
-st.markdown("---")
-st.markdown("Made with ❤️ using Streamlit")
+
+
 
