@@ -1,53 +1,67 @@
 import streamlit as st
 import pandas as pd
 import numpy as np
-
-from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import LabelEncoder
 from sklearn.feature_extraction.text import TfidfVectorizer
-
+from sklearn.model_selection import train_test_split
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import Dense
 from tensorflow.keras.utils import to_categorical
 
+# -------------------------------
+# Page Config
+# -------------------------------
+st.set_page_config(page_title="Skin Disease Chatbot", page_icon="🩺", layout="centered")
 
-st.title("Skin Disease Prediction Chatbot")
+st.title("🩺 Skin Disease Prediction Chatbot")
 st.write("Enter your symptoms to predict possible skin diseases.")
 
-symptoms = st.text_input("Enter symptoms (comma separated):")
+# -------------------------------
+# Session state for chat messages
+# -------------------------------
+if "messages" not in st.session_state:
+    st.session_state.messages = []
 
+# -------------------------------
+# Load & Prepare Model (Run Once)
+# -------------------------------
+@st.cache_resource
+def load_model():
+    data = pd.read_csv("Symptom2Disease.csv")
+    X_text = data["text"]
+    y = data["label"]
 
-data = pd.read_csv("Symptom2Disease.csv")
+    le = LabelEncoder()
+    y_encoded = le.fit_transform(y)
+    y_cat = to_categorical(y_encoded)
 
-X_text = data["text"]
-y = data["label"]
+    vectorizer = TfidfVectorizer()
+    X = vectorizer.fit_transform(X_text).toarray()
 
-le = LabelEncoder()
-y_encoded = le.fit_transform(y)
-y_cat = to_categorical(y_encoded)
+    X_train, X_test, y_train, y_test = train_test_split(
+        X, y_cat, test_size=0.2, random_state=42
+    )
 
-vectorizer = TfidfVectorizer()
-X = vectorizer.fit_transform(X_text).toarray()
+    model = Sequential()
+    model.add(Dense(64, activation='relu', input_shape=(X_train.shape[1],)))
+    model.add(Dense(32, activation='relu'))
+    model.add(Dense(y_cat.shape[1], activation='softmax'))
 
-X_train, X_test, y_train, y_test = train_test_split(
-    X, y_cat, test_size=0.2, random_state=42
-)
+    model.compile(
+        optimizer='adam',
+        loss='categorical_crossentropy',
+        metrics=['accuracy']
+    )
 
+    model.fit(X_train, y_train, epochs=5, batch_size=8, verbose=0)
 
-model = Sequential()
-model.add(Dense(64, activation='relu', input_shape=(X_train.shape[1],)))
-model.add(Dense(32, activation='relu'))
-model.add(Dense(y_cat.shape[1], activation='softmax'))
+    return model, vectorizer, le
 
-model.compile(
-    optimizer='adam',
-    loss='categorical_crossentropy',
-    metrics=['accuracy']
-)
+model, vectorizer, le = load_model()
 
-model.fit(X_train, y_train, epochs=5, batch_size=8, verbose=0)
-
-
+# -------------------------------
+# Disease advice dictionary
+# -------------------------------
 disease_advice = {
     "Psoriasis": "It seems like you may have Psoriasis. Keep your skin moisturized, avoid harsh soaps, and consult a dermatologist if it worsens.",
     "Varicose Veins": "This looks like Varicose Veins. Avoid standing for long periods, elevate your legs, and consider medical evaluation for compression therapy.",
@@ -75,7 +89,9 @@ disease_advice = {
     "diabetes": "It may be Diabetes. Monitor blood sugar, maintain a healthy diet, and consult a doctor for management."
 }
 
-
+# -------------------------------
+# Chatbot function
+# -------------------------------
 def chatbot_reply(text):
     vec = vectorizer.transform([text]).toarray()
     pred = model.predict(vec)
@@ -83,13 +99,27 @@ def chatbot_reply(text):
     advice = disease_advice.get(label, "Monitor symptoms and take care.")
     return label, advice
 
+# -------------------------------
+# User input
+# -------------------------------
+user_input = st.text_input("Enter your symptoms here and press Enter:")
 
-if st.button("Predict"):
+if user_input:
+    disease, advice = chatbot_reply(user_input)
+    st.session_state.messages.append({"role": "user", "content": user_input})
+    st.session_state.messages.append({"role": "ai", "content": f"Predicted Disease: {disease}\nAdvice: {advice}"})
 
-    if symptoms.strip() == "":
-        st.warning("Please enter symptoms.")
+# -------------------------------
+# Display chat messages
+# -------------------------------
+for message in st.session_state.messages:
+    if message["role"] == "user":
+        st.markdown(f"<div style='text-align: right; background-color: #DCF8C6; padding: 8px; border-radius: 10px; margin:5px 0'>{message['content']}</div>", unsafe_allow_html=True)
     else:
-        disease, advice = chatbot_reply(symptoms)
+        st.markdown(f"<div style='text-align: left; background-color: #F1F0F0; padding: 8px; border-radius: 10px; margin:5px 0'>{message['content']}</div>", unsafe_allow_html=True)
 
-        st.success(f"Predicted Disease: {disease}")
-        st.write(advice)
+# -------------------------------
+# Footer
+# -------------------------------
+st.markdown("---")
+st.markdown("Made with ❤️ using Streamlit")
