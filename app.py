@@ -8,23 +8,17 @@ from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import Dense
 from tensorflow.keras.utils import to_categorical
 
-# -------------------------------
-# Page Config
-# -------------------------------
+
 st.set_page_config(page_title="Skin Disease Chatbot", page_icon="🩺", layout="centered")
 
 st.title("🩺 Skin Disease Prediction Chatbot")
 st.write("Enter your symptoms to predict possible skin diseases.")
 
-# -------------------------------
-# Session state for chat messages
-# -------------------------------
+
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
-# -------------------------------
-# Load & Prepare Model (Run Once)
-# -------------------------------
+
 @st.cache_resource
 def load_model():
     data = pd.read_csv("Symptom2Disease.csv")
@@ -59,9 +53,7 @@ def load_model():
 
 model, vectorizer, le = load_model()
 
-# -------------------------------
-# Disease advice dictionary
-# -------------------------------
+
 disease_advice = {
     "Psoriasis": "It seems like you may have Psoriasis. Keep your skin moisturized, avoid harsh soaps, and consult a dermatologist if it worsens.",
     "Varicose Veins": "This looks like Varicose Veins. Avoid standing for long periods, elevate your legs, and consider medical evaluation for compression therapy.",
@@ -89,9 +81,7 @@ disease_advice = {
     "diabetes": "It may be Diabetes. Monitor blood sugar, maintain a healthy diet, and consult a doctor for management."
 }
 
-# -------------------------------
-# Chatbot function
-# -------------------------------
+
 def chatbot_reply(text):
     vec = vectorizer.transform([text]).toarray()
     pred = model.predict(vec)
@@ -99,9 +89,7 @@ def chatbot_reply(text):
     advice = disease_advice.get(label, "Monitor symptoms and take care.")
     return label, advice
 
-# -------------------------------
-# User input
-# -------------------------------
+
 user_input = st.text_input("Enter your symptoms here and press Enter:")
 
 if user_input:
@@ -109,17 +97,14 @@ if user_input:
     st.session_state.messages.append({"role": "user", "content": user_input})
     st.session_state.messages.append({"role": "ai", "content": f"Predicted Disease: {disease}\nAdvice: {advice}"})
 
-# -------------------------------
-# Display chat messages
-# -------------------------------
+
 for message in st.session_state.messages:
     if message["role"] == "user":
         st.markdown(f"<div style='text-align: right; background-color: #DCF8C6; padding: 8px; border-radius: 10px; margin:5px 0'>{message['content']}</div>", unsafe_allow_html=True)
     else:
         st.markdown(f"<div style='text-align: left; background-color: #F1F0F0; padding: 8px; border-radius: 10px; margin:5px 0'>{message['content']}</div>", unsafe_allow_html=True)
 
-# -------------------------------
-# Footer
-# -------------------------------
+
 st.markdown("---")
 st.markdown("Made with ❤️ using Streamlit")
+
